@@ -10,29 +10,27 @@ var ErrInvalidString = errors.New("invalid string")
 
 func Unpack(str string) (string, error) {
 	var builder strings.Builder
-
-	originalLen := len(str)
+	runes := []rune(str)
 	// Дополнить строку лишним пробелом для удобства обработки
-	str += " "
+	runes = append(runes, ' ')
 
-	for i := 0; i < originalLen; i++ {
-		currentIsChar := isChar(rune(str[i]))
-		nextIsChar := isChar(rune(str[i+1]))
+	for i := 0; i < len(runes)-1; i++ {
+		currentIsChar := isChar(runes[i])
+		nextIsChar := isChar(runes[i+1])
 
-		if currentIsChar && !nextIsChar {
+		if currentIsChar && !nextIsChar { //nolint:gocritic
 			// Сценарий 1 - буква + цифра
-			repeatCount, _ := strconv.Atoi(string(str[i+1]))
-			repeatedChar := strings.Repeat(string(str[i]), repeatCount)
+			repeatCount, err := strconv.Atoi(string(runes[i+1]))
+			if err != nil {
+				return "", ErrInvalidString
+			}
+			repeatedChar := strings.Repeat(string(runes[i]), repeatCount)
 			builder.WriteString(repeatedChar)
 			i++
-		}
-
-		if currentIsChar && nextIsChar {
+		} else if currentIsChar {
 			// Сценарий 2 - буква + буква
-			builder.WriteString(string(str[i]))
-		}
-
-		if !currentIsChar {
+			builder.WriteString(string(runes[i]))
+		} else {
 			// Сценарий 3 - цифра + любой символ - ошибка
 			// Например цифра в конце строки или две цифры подряд
 			return "", ErrInvalidString
