@@ -16,15 +16,13 @@ func Unpack(str string) (string, error) {
 	str += " "
 
 	for i := 0; i < originalLen; i++ {
-		currentIsDigit := isDigit(rune(str[i]))
-		currentIsChar := !currentIsDigit
+		currentIsChar := isChar(rune(str[i]))
+		nextIsChar := isChar(rune(str[i+1]))
 
-		nextIsDigit := isDigit(rune(str[i+1]))
-		nextIsChar := !nextIsDigit
-
-		if currentIsChar && nextIsDigit {
+		if currentIsChar && !nextIsChar {
 			// Сценарий 1 - буква + цифра
-			repeatedChar := strings.Repeat(string(str[i]), int(str[i+1]-'0'))
+			repeatCount, _ := strconv.Atoi(string(str[i+1]))
+			repeatedChar := strings.Repeat(string(str[i]), repeatCount)
 			builder.WriteString(repeatedChar)
 			i++
 		}
@@ -34,7 +32,7 @@ func Unpack(str string) (string, error) {
 			builder.WriteString(string(str[i]))
 		}
 
-		if currentIsDigit {
+		if !currentIsChar {
 			// Сценарий 3 - цифра + любой символ - ошибка
 			// Например цифра в конце строки или две цифры подряд
 			return "", ErrInvalidString
@@ -44,7 +42,7 @@ func Unpack(str string) (string, error) {
 	return builder.String(), nil
 }
 
-func isDigit(r rune) bool {
-	_, e := strconv.Atoi(string(r))
-	return e == nil
+func isChar(r rune) bool {
+	_, err := strconv.Atoi(string(r))
+	return err != nil
 }
