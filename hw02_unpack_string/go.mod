@@ -1,4 +1,4 @@
-module github.com/ar2r/hw02_unpack_string
+module github.com/ar2r/hw_otus/hw02_unpack_string
 
 go 1.22
 
