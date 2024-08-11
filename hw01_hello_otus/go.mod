@@ -1,4 +1,4 @@
-module github.com/ar2r/hw_otus/hw01_hello_otus
+module github.com/ar2r/go-otus/hw01_hello_otus
 
 go 1.22
 
