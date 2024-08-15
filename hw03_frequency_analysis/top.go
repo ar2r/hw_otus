@@ -62,7 +62,7 @@ func getTop(kvSlice []kv, topCount int) []string {
 }
 
 func sortSlice(words map[string]int) []kv {
-	var kvSlice = make([]kv, 0, len(words))
+	kvSlice := make([]kv, 0, len(words))
 	for k, v := range words {
 		kvSlice = append(kvSlice, kv{k, v})
 	}
