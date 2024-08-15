@@ -42,7 +42,7 @@ func Top10(text string) []string {
 			continue
 		}
 
-		Words[word] += 1
+		Words[word]++
 	}
 
 	// Сортировка по частоте слова
@@ -62,7 +62,7 @@ func getTop(kvSlice []kv, topCount int) []string {
 }
 
 func sortSlice(words map[string]int) []kv {
-	var kvSlice []kv
+	var kvSlice = make([]kv, 0, len(words))
 	for k, v := range words {
 		kvSlice = append(kvSlice, kv{k, v})
 	}
