@@ -8,8 +8,10 @@ import (
 )
 
 var (
-	ClearRegExp *regexp.Regexp
-	BlackList   = map[string]struct{}{}
+	ClearRegExp = regexp.MustCompile(`^[^a-zA-Zа-яА-Я\-]+|[^a-zA-Zа-яА-Я\-]+$`)
+	BlackList   = map[string]struct{}{
+		"-": {},
+	}
 )
 
 type kv struct {
@@ -17,21 +19,13 @@ type kv struct {
 	Value int
 }
 
-func init() {
+func Top10(text string) []string {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Println("Что-то пошло не так:", err)
 		}
 	}()
 
-	// Инициализация регулярных выражений
-	ClearRegExp = regexp.MustCompile(`^[^a-zA-Zа-яА-Я\-]+|[^a-zA-Zа-яА-Я\-]+$`)
-
-	// Инициализация Blacklist
-	BlackList["-"] = struct{}{}
-}
-
-func Top10(text string) []string {
 	Words := map[string]int{}
 
 	for _, word := range strings.Fields(text) {
@@ -46,7 +40,7 @@ func Top10(text string) []string {
 	}
 
 	// Сортировка по частоте слова
-	kvSlice := sortSlice(Words)
+	kvSlice := sortByValueDesc(Words)
 
 	// Вывод топ 10
 	return getTop(kvSlice, 10)
@@ -61,7 +55,7 @@ func getTop(kvSlice []kv, topCount int) []string {
 	return top
 }
 
-func sortSlice(words map[string]int) []kv {
+func sortByValueDesc(words map[string]int) []kv {
 	kvSlice := make([]kv, 0, len(words))
 	for k, v := range words {
 		kvSlice = append(kvSlice, kv{k, v})
