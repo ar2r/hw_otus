@@ -17,110 +17,96 @@ type ListItem struct {
 }
 
 type list struct {
-	First *ListItem
-	Last  *ListItem
-	// init empty map
-	Items map[interface{}]*ListItem
+	head   *ListItem
+	tail   *ListItem
+	length int
 }
 
 func (l *list) Len() int {
-	return len(l.Items)
+	return l.length
 }
 
 func (l *list) Front() *ListItem {
-	return l.First
+	return l.head
 }
 
 func (l *list) Back() *ListItem {
-	return l.Last
+	return l.tail
 }
 
 func (l *list) PushFront(v interface{}) *ListItem {
-	// todo: Проверить на дубли
-	OldFirst := l.First
-	NewFirst := &ListItem{Value: v, Next: OldFirst}
+	newItem := &ListItem{Value: v}
 
-	if OldFirst != nil {
-		NewFirst.Next = OldFirst
-		OldFirst.Prev = NewFirst
-	}
-
-	if len(l.Items) == 0 {
-		l.Last = NewFirst
-		l.First = NewFirst
+	if l.head == nil { // Если список пустой
+		l.head = newItem
+		l.tail = newItem
 	} else {
-		l.First = NewFirst
+		newItem.Next = l.head
+		l.head.Prev = newItem
+		l.head = newItem
 	}
 
-	l.Items[v] = NewFirst
-
-	return NewFirst
+	l.length++
+	return newItem
 }
 
 func (l *list) PushBack(v interface{}) *ListItem {
-	// todo: Проверить на дубли
-	OldLast := l.Last
-	NewLast := &ListItem{Value: v, Prev: OldLast}
+	newItem := &ListItem{Value: v}
 
-	if OldLast != nil {
-		OldLast.Next = NewLast
-		NewLast.Prev = OldLast
-	}
-
-	if len(l.Items) == 0 {
-		l.First = NewLast
-		l.Last = NewLast
+	if l.tail == nil { // Если список пустой
+		l.head = newItem
+		l.tail = newItem
 	} else {
-		l.Last = NewLast
+		newItem.Prev = l.tail
+		l.tail.Next = newItem
+		l.tail = newItem
 	}
 
-	l.Items[v] = NewLast
-
-	return NewLast
+	l.length++
+	return newItem
 }
 
 func (l *list) Remove(i *ListItem) {
-	if i.Prev != nil && i.Next != nil {
-		// Удаляем ссылку на элемент
+	if i.Prev != nil {
 		i.Prev.Next = i.Next
+	} else {
+		l.head = i.Next
+	}
+
+	if i.Next != nil {
 		i.Next.Prev = i.Prev
+	} else {
+		l.tail = i.Prev
 	}
 
-	if i.Prev == nil && i.Next != nil {
-		// Удаляем ссылку на левый элемент
-		i.Next.Prev = nil
-	}
-
-	if i.Next == nil && i.Prev != nil {
-		// Удаляем ссылку на правый элемент
-		i.Prev.Next = nil
-	}
-
-	delete(l.Items, i.Value)
+	l.length--
 }
 
 func (l *list) MoveToFront(i *ListItem) {
-	if i.Prev == nil {
-		// Элемент уже в начале списка
+	if i == l.head { // Если элемент уже находится в начале
 		return
 	}
 
-	// Удаляем ссылку на элемент
-	i.Prev.Next = i.Next
-	if i.Next != nil {
-		i.Next.Prev = i.Prev
+	// Удаляем элемент из текущего положения
+	l.Remove(i)
+
+	// Вставляем его в начало
+	i.Next = l.head
+	i.Prev = nil
+
+	if l.head != nil {
+		l.head.Prev = i
 	}
 
-	// Добавляем элемент в начало списка
-	OldFirst := l.First
-	l.First = i
-	l.First.Next = OldFirst
-	OldFirst.Prev = l.First
-	l.First.Prev = nil
+	l.head = i
+
+	if l.tail == nil { // Если список был пуст
+		l.tail = i
+	}
+
+	l.length++
 }
 
 func NewList() List {
-	return &list{
-		Items: make(map[interface{}]*ListItem),
-	}
+	return new(list)
 }
