@@ -1,7 +1,5 @@
 package hw04lrucache
 
-import "fmt"
-
 type List interface {
 	Len() int
 	Front() *ListItem
@@ -10,7 +8,6 @@ type List interface {
 	PushBack(v interface{}) *ListItem
 	Remove(i *ListItem)
 	MoveToFront(i *ListItem)
-	Ddd()
 }
 
 type ListItem struct {
@@ -20,7 +17,6 @@ type ListItem struct {
 }
 
 type list struct {
-	List
 	First *ListItem
 	Last  *ListItem
 	// init empty map
@@ -28,17 +24,14 @@ type list struct {
 }
 
 func (l *list) Len() int {
-	// Place your code here.
 	return len(l.Items)
 }
 
 func (l *list) Front() *ListItem {
-	// Place your code here.
 	return l.First
 }
 
 func (l *list) Back() *ListItem {
-	// Place your code here.
 	return l.Last
 }
 
@@ -87,18 +80,20 @@ func (l *list) PushBack(v interface{}) *ListItem {
 }
 
 func (l *list) Remove(i *ListItem) {
-	if i.Prev == nil && i.Next == nil {
-		// Удаляем единственный элемент
-	} else if i.Prev == nil {
-		// Удаляем ссылку на левый элемент
-		i.Next.Prev = nil
-	} else if i.Next == nil {
-		// Удаляем ссылку на правый элемент
-		i.Prev.Next = nil
-	} else {
+	if i.Prev != nil && i.Next != nil {
 		// Удаляем ссылку на элемент
 		i.Prev.Next = i.Next
 		i.Next.Prev = i.Prev
+	}
+
+	if i.Prev == nil && i.Next != nil {
+		// Удаляем ссылку на левый элемент
+		i.Next.Prev = nil
+	}
+
+	if i.Next == nil && i.Prev != nil {
+		// Удаляем ссылку на правый элемент
+		i.Prev.Next = nil
 	}
 
 	delete(l.Items, i.Value)
@@ -122,12 +117,6 @@ func (l *list) MoveToFront(i *ListItem) {
 	l.First.Next = OldFirst
 	OldFirst.Prev = l.First
 	l.First.Prev = nil
-}
-
-func (l *list) Ddd() {
-	for i := l.First; i != nil; i = i.Next {
-		fmt.Println(i.Value)
-	}
 }
 
 func NewList() List {
