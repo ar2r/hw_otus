@@ -49,7 +49,7 @@ func TestCache(t *testing.T) {
 		require.Nil(t, val)
 	})
 
-	t.Run("clear cache", func(t *testing.T) {
+	t.Run("очистка кэша", func(t *testing.T) {
 		c := NewCache(3)
 		c.Set("meKey", 100)
 		c.Clear()
@@ -57,14 +57,15 @@ func TestCache(t *testing.T) {
 		require.False(t, ok, "Кэш должен быть пустым после вызова Clear")
 	})
 
-	t.Run("clear cache", func(t *testing.T) {
+	t.Run("очистка пустого кэша", func(t *testing.T) {
 		c := NewCache(3)
+		// Ничего другого не придумал, как проверить на панику)))
 		require.NotPanics(t, func() {
 			c.Clear()
 		}, "Очистка пустого кэша не должна вызывать паники")
 	})
 
-	t.Run("capacity", func(t *testing.T) {
+	t.Run("превышение емкости", func(t *testing.T) {
 		c := NewCache(2)
 		c.Set("a", 100)
 		c.Set("b", 200)
@@ -76,6 +77,27 @@ func TestCache(t *testing.T) {
 		require.True(t, ok, "Ключ 'b' должен остаться в кэше")
 		_, ok = c.Get("c")
 		require.True(t, ok, "Ключ 'c' должен остаться в кэше")
+	})
+
+	t.Run("выталкивание неиспользуемых", func(t *testing.T) {
+		c := NewCache(3)
+		c.Set("Сбер", 100)
+		c.Set("Т-банк", 200)
+		c.Set("PayPal", "редко используется")
+
+		// Читаем две первых и добавляем новое значение
+		c.Get("Сбер")
+		c.Set("Т-Банк", 201)
+		c.Set("Альфа", 300)
+
+		_, ok := c.Get("PayPal")
+		require.False(t, ok, "Ключ 'PayPal' должен быть удален из кэша")
+		_, ok = c.Get("Сбер")
+		require.True(t, ok, "Ключ 'Сбер' должен остаться в кэше")
+		_, ok = c.Get("Т-Банк")
+		require.True(t, ok, "Ключ 'Т-Банк' должен остаться в кэше")
+		_, ok = c.Get("Альфа")
+		require.True(t, ok, "Ключ 'Альфа' должен остаться в кэше")
 	})
 }
 
