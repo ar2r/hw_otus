@@ -17,7 +17,12 @@ func TestCache(t *testing.T) {
 		require.False(t, ok, "Ключ 'aaa' должен отсутствовать в пустом кэше")
 
 		_, ok = c.Get("aaa")
-		require.False(t, ok, "ключ 'aaa' должен отсутствовать в пустом кэше")
+		require.False(t, ok, "Вызов Get не должен приводить к записи ключа в кэш")
+
+		// Ничего другого не придумал, как проверить на панику)))
+		require.NotPanics(t, func() {
+			c.Clear()
+		}, "Очистка пустого кэша не должна вызывать паники")
 	})
 
 	t.Run("simple", func(t *testing.T) {
@@ -49,7 +54,7 @@ func TestCache(t *testing.T) {
 		require.Nil(t, val)
 	})
 
-	t.Run("очистка кэша", func(t *testing.T) {
+	t.Run("Очистка кэша", func(t *testing.T) {
 		c := NewCache(3)
 		c.Set("meKey", 100)
 		c.Clear()
@@ -57,15 +62,7 @@ func TestCache(t *testing.T) {
 		require.False(t, ok, "Кэш должен быть пустым после вызова Clear")
 	})
 
-	t.Run("очистка пустого кэша", func(t *testing.T) {
-		c := NewCache(3)
-		// Ничего другого не придумал, как проверить на панику)))
-		require.NotPanics(t, func() {
-			c.Clear()
-		}, "Очистка пустого кэша не должна вызывать паники")
-	})
-
-	t.Run("превышение емкости", func(t *testing.T) {
+	t.Run("Превышение емкости", func(t *testing.T) {
 		c := NewCache(2)
 		c.Set("a", 100)
 		c.Set("b", 200)
@@ -79,7 +76,7 @@ func TestCache(t *testing.T) {
 		require.True(t, ok, "Ключ 'c' должен остаться в кэше")
 	})
 
-	t.Run("выталкивание неиспользуемых", func(t *testing.T) {
+	t.Run("Выталкивание неиспользуемых", func(t *testing.T) {
 		c := NewCache(3)
 		c.Set("Сбер", 100)
 		c.Set("Т-банк", 200)
@@ -102,8 +99,6 @@ func TestCache(t *testing.T) {
 }
 
 func TestCacheMultithreading(t *testing.T) {
-	//t.Skip() // Remove me if task with asterisk completed.
-
 	c := NewCache(10)
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
