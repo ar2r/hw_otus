@@ -14,10 +14,15 @@ func TestCache(t *testing.T) {
 		c := NewCache(10)
 
 		_, ok := c.Get("aaa")
-		require.False(t, ok)
+		require.False(t, ok, "Ключ 'aaa' должен отсутствовать в пустом кэше")
 
-		_, ok = c.Get("bbb")
-		require.False(t, ok)
+		_, ok = c.Get("aaa")
+		require.False(t, ok, "Вызов Get не должен приводить к записи ключа в кэш")
+
+		// Ничего другого не придумал, как проверить на панику)))
+		require.NotPanics(t, func() {
+			c.Clear()
+		}, "Очистка пустого кэша не должна вызывать паники")
 	})
 
 	t.Run("simple", func(t *testing.T) {
@@ -49,14 +54,51 @@ func TestCache(t *testing.T) {
 		require.Nil(t, val)
 	})
 
-	t.Run("purge logic", func(t *testing.T) {
-		// Write me
+	t.Run("Очистка кэша", func(t *testing.T) {
+		c := NewCache(3)
+		c.Set("meKey", 100)
+		c.Clear()
+		_, ok := c.Get("myKey")
+		require.False(t, ok, "Кэш должен быть пустым после вызова Clear")
+	})
+
+	t.Run("Превышение емкости", func(t *testing.T) {
+		c := NewCache(2)
+		c.Set("a", 100)
+		c.Set("b", 200)
+		c.Set("c", 300)
+
+		_, ok := c.Get("a")
+		require.False(t, ok, "Ключ 'a' должен быть удален из кэша")
+		_, ok = c.Get("b")
+		require.True(t, ok, "Ключ 'b' должен остаться в кэше")
+		_, ok = c.Get("c")
+		require.True(t, ok, "Ключ 'c' должен остаться в кэше")
+	})
+
+	t.Run("Выталкивание неиспользуемых", func(t *testing.T) {
+		c := NewCache(3)
+		c.Set("Сбер", 100)
+		c.Set("Т-банк", 200)
+		c.Set("PayPal", "редко используется")
+
+		// Читаем две первых и добавляем новое значение
+		c.Get("Сбер")
+		c.Set("Т-Банк", 201)
+		c.Set("Альфа", 300)
+
+		_, ok := c.Get("PayPal")
+		require.False(t, ok, "Ключ 'PayPal' должен быть удален из кэша")
+		_, ok = c.Get("Сбер")
+		require.True(t, ok, "Ключ 'Сбер' должен остаться в кэше")
+		_, ok = c.Get("Т-Банк")
+		require.True(t, ok, "Ключ 'Т-Банк' должен остаться в кэше")
+		_, ok = c.Get("Альфа")
+		require.True(t, ok, "Ключ 'Альфа' должен остаться в кэше")
 	})
 }
 
-func TestCacheMultithreading(t *testing.T) {
-	t.Skip() // Remove me if task with asterisk completed.
-
+func TestCacheMultithreading(_ *testing.T) {
 	c := NewCache(10)
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
