@@ -53,14 +53,9 @@ func (l *list) PushFront(v interface{}) *ListItem {
 func (l *list) PushBack(v interface{}) *ListItem {
 	newItem := &ListItem{Value: v}
 
-	if l.tail == nil { // Если список пустой
-		l.head = newItem
-		l.tail = newItem
-	} else {
-		newItem.Prev = l.tail
-		l.tail.Next = newItem
-		l.tail = newItem
-	}
+	newItem.Prev = l.tail
+	l.tail.Next = newItem
+	l.tail = newItem
 
 	l.length++
 	return newItem
@@ -99,10 +94,6 @@ func (l *list) MoveToFront(i *ListItem) {
 	}
 
 	l.head = i
-
-	if l.tail == nil { // Если список был пуст
-		l.tail = i
-	}
 
 	l.length++
 }
