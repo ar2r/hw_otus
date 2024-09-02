@@ -20,7 +20,6 @@ func TestRun(t *testing.T) {
 		tasksCount := 50
 		tasks := make([]Task, 0, tasksCount)
 		var runTasksCount int32
-
 		var mu sync.Mutex
 
 		for i := 0; i < tasksCount; i++ {
@@ -49,6 +48,7 @@ func TestRun(t *testing.T) {
 		tasks := make([]Task, 0, tasksCount)
 		var runTasksCount int32
 		var sumTime time.Duration
+		var mu sync.Mutex
 
 		for i := 0; i < tasksCount; i++ {
 			taskSleep := time.Millisecond * time.Duration(rand.Intn(100))
@@ -56,7 +56,9 @@ func TestRun(t *testing.T) {
 
 			tasks = append(tasks, func() error {
 				time.Sleep(taskSleep)
+				mu.Lock()
 				atomic.AddInt32(&runTasksCount, 1)
+				mu.Unlock()
 				return nil
 			})
 		}
@@ -70,9 +72,61 @@ func TestRun(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Eventually(t, func() bool {
-			return runTasksCount == int32(tasksCount)
+			mu.Lock()
+			isEqual := runTasksCount == int32(tasksCount)
+			mu.Unlock()
+			return isEqual
 		}, sumTime/2, time.Millisecond*10, "not all tasks were completed")
 
 		require.LessOrEqual(t, int64(elapsedTime), int64(sumTime/2), "tasks were run sequentially?")
 	})
+
+	t.Run("no tasks", func(t *testing.T) {
+		tasksCount := 0
+		tasks := make([]Task, 0, tasksCount)
+
+		workersCount := 0
+
+		start := time.Now()
+		err := Run(tasks, workersCount, 0)
+		elapsedTime := time.Since(start)
+		require.NoError(t, err)
+
+		require.LessOrEqual(t, elapsedTime, time.Millisecond, "tasks were run sequentially?")
+	})
+}
+
+func TestRunConcurrency(t *testing.T) {
+	tasksCount := 100
+	tasks := make([]Task, 0, tasksCount)
+	var runTasksCount int32
+	var mu sync.Mutex
+	doneCh := make(chan struct{})
+
+	for i := 0; i < tasksCount; i++ {
+		tasks = append(tasks, func() error {
+			mu.Lock()
+			atomic.AddInt32(&runTasksCount, 1)
+			mu.Unlock()
+			doneCh <- struct{}{}
+			return nil
+		})
+	}
+
+	workersCount := 5
+	maxErrorsCount := 1
+
+	go func() {
+		err := Run(tasks, workersCount, maxErrorsCount)
+		require.NoError(t, err)
+		close(doneCh)
+	}()
+
+	for i := 0; i < tasksCount; i++ {
+		<-doneCh
+	}
+
+	mu.Lock()
+	require.Equal(t, int32(tasksCount), runTasksCount, "not all tasks were completed")
+	mu.Unlock()
 }
