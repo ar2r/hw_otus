@@ -47,7 +47,9 @@ func Run(tasks []Task, n, m int) error {
 			}
 		}
 		close(tasksCh)
+	}()
 
+	go func() {
 		wg.Wait()
 		close(errCh)
 	}()
