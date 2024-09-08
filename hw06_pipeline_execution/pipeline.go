@@ -36,7 +36,7 @@ func runStage(wg *sync.WaitGroup, in In, done In, stage Stage) Out {
 		defer func() {
 			close(stageIn)
 			wg.Done()
-			//fmt.Println("⛔️ close stageIn channel")
+			// fmt.Println("⛔️ close stageIn channel")
 		}()
 
 		for {
@@ -61,7 +61,7 @@ func runStage(wg *sync.WaitGroup, in In, done In, stage Stage) Out {
 		defer func() {
 			close(out)
 			wg.Done()
-			//fmt.Println("⛔️ close out channel")
+			// fmt.Println("⛔️ close out channel")
 		}()
 
 		for v := range stage(stageIn) {
