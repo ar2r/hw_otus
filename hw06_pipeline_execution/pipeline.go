@@ -1,7 +1,6 @@
 package hw06pipelineexecution
 
 import (
-	"fmt"
 	"sync"
 )
 
@@ -14,12 +13,10 @@ type (
 type Stage func(in In) (out Out)
 
 func ExecutePipeline(in In, done In, stages ...Stage) Out {
-	var i int32 = 0
 	wg := sync.WaitGroup{}
+
 	for _, stage := range stages {
-		fmt.Println("🚚Create stage goroutine", i, stage)
-		in = runStage(&wg, i, in, done, stage)
-		i++
+		in = runStage(&wg, in, done, stage)
 	}
 
 	go func() {
@@ -29,29 +26,52 @@ func ExecutePipeline(in In, done In, stages ...Stage) Out {
 	return in
 }
 
-func runStage(wg *sync.WaitGroup, i int32, in In, done In, stage Stage) Out {
-	wg.Add(1)
+func runStage(wg *sync.WaitGroup, in In, done In, stage Stage) Out {
 	out := make(Bi)
+	stageIn := make(Bi)
+	wg.Add(2)
+
+	// Перекладывание данных из in в stageIn
 	go func() {
 		defer func() {
-			fmt.Println(i, "⛔️close outCh")
+			close(stageIn)
 			wg.Done()
-			close(out)
+			//fmt.Println("⛔️ close stageIn channel")
 		}()
 
-		stageOut := stage(in)
 		for {
 			select {
 			case <-done:
 				return
-			case v, ok := <-stageOut:
+			case v, ok := <-in:
 				if !ok {
 					return
 				}
-				fmt.Println("\t", i, "🟡new value in stageOut: ", v)
-				out <- v
+				select {
+				case <-done:
+					return
+				case stageIn <- v:
+				}
 			}
 		}
 	}()
+
+	// Обработка данных из канала stageIn
+	go func() {
+		defer func() {
+			close(out)
+			wg.Done()
+			//fmt.Println("⛔️ close out channel")
+		}()
+
+		for v := range stage(stageIn) {
+			select {
+			case <-done:
+				return
+			case out <- v:
+			}
+		}
+	}()
+
 	return out
 }
