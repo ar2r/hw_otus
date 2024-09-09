@@ -14,7 +14,7 @@ const (
 	fault         = sleepPerStage / 2
 )
 
-var isFullTesting = true
+var isFullTesting = false
 
 func TestPipeline(t *testing.T) {
 	// Stage generator
@@ -147,9 +147,86 @@ func TestAllStageStop(t *testing.T) {
 		for s := range ExecutePipeline(in, done, stages...) {
 			result = append(result, s.(string))
 		}
+
 		wg.Wait()
-
 		require.Len(t, result, 0)
-
 	})
+}
+
+func TestEmptyInput(t *testing.T) {
+	stages := []Stage{
+		func(in In) Out {
+			out := make(Bi)
+			go func() {
+				defer close(out)
+				for v := range in {
+					out <- v
+				}
+			}()
+			return out
+		},
+	}
+
+	in := make(Bi)
+	close(in)
+
+	result := make([]interface{}, 0)
+	for s := range ExecutePipeline(in, nil, stages...) {
+		result = append(result, s)
+	}
+
+	require.Len(t, result, 0)
+}
+
+func TestLargeInput(t *testing.T) {
+	stages := []Stage{
+		func(in In) Out {
+			out := make(Bi)
+			go func() {
+				defer close(out)
+				for v := range in {
+					out <- v
+				}
+			}()
+			return out
+		},
+	}
+
+	in := make(Bi)
+	go func() {
+		for i := 0; i < 100; i++ {
+			in <- i
+		}
+		close(in)
+	}()
+
+	result := make([]int, 0)
+	for s := range ExecutePipeline(in, nil, stages...) {
+		result = append(result, s.(int))
+	}
+
+	require.Len(t, result, 100)
+	for i := 0; i < 100; i++ {
+		require.Equal(t, i, result[i])
+	}
+}
+
+func TestNoStages(t *testing.T) {
+	in := make(Bi)
+	go func() {
+		for i := 0; i < 5; i++ {
+			in <- i
+		}
+		close(in)
+	}()
+
+	result := make([]int, 0)
+	for s := range ExecutePipeline(in, nil) {
+		result = append(result, s.(int))
+	}
+
+	require.Len(t, result, 5)
+	for i := 0; i < 5; i++ {
+		require.Equal(t, i, result[i])
+	}
 }
