@@ -12,21 +12,20 @@ func ExecutePipeline(in In, done In, stages ...Stage) Out {
 	for _, stage := range stages {
 		in = runStage(in, done, stage)
 	}
-
 	return in
 }
 
 func runStage(in In, done In, stage Stage) Out {
 	out := make(Bi)
 	stageIn := make(Bi)
+	stageOut := stage(stageIn)
 
-	// Перекладывание данных из in в stageIn
+	// Передача данных из канала in в канал stageIn
 	go func() {
 		defer func() {
 			close(stageIn)
 			// fmt.Println("⛔️ close stageIn channel")
 		}()
-
 		for {
 			select {
 			case <-done:
@@ -44,21 +43,16 @@ func runStage(in In, done In, stage Stage) Out {
 		}
 	}()
 
-	// Обработка данных из канала stageIn
+	// Обработка данных из канала stageOut для передачи в out
 	go func() {
 		defer func() {
 			close(out)
 			// fmt.Println("⛔️ close out channel")
 		}()
 
-		stageOut := stage(stageIn)
-		for {
+		for v := range stageOut {
 			// Расскомментировать для демонстрации проблемы
 			// time.Sleep(time.Millisecond * 100)
-			v, ok := <-stageOut
-			if !ok {
-				return
-			}
 			select {
 			case <-done:
 				return
