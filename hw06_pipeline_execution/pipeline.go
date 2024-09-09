@@ -1,9 +1,5 @@
 package hw06pipelineexecution
 
-import (
-	"math"
-)
-
 type (
 	In  = <-chan interface{}
 	Out = In
@@ -21,7 +17,7 @@ func ExecutePipeline(in In, done In, stages ...Stage) Out {
 }
 
 func runStage(in In, done In, stage Stage) Out {
-	out := make(Bi, math.MaxUint16)
+	out := make(Bi)
 	stageIn := make(Bi)
 
 	// Перекладывание данных из in в stageIn
@@ -50,14 +46,20 @@ func runStage(in In, done In, stage Stage) Out {
 
 	// Обработка данных из канала stageIn
 	go func() {
+		stageOut := make(Out)
 		defer func() {
 			close(out)
 			// fmt.Println("⛔️ close out channel")
 		}()
 
-		for v := range stage(stageIn) {
+		stageOut = stage(stageIn)
+		for {
 			// Расскомментировать для демонстрации проблемы
 			// time.Sleep(time.Millisecond * 100)
+			v, ok := <-stageOut
+			if !ok {
+				return
+			}
 			select {
 			case <-done:
 				return
