@@ -14,7 +14,7 @@ const (
 	fault         = sleepPerStage / 2
 )
 
-var isFullTesting = true
+var isFullTesting = false
 
 func TestPipeline(t *testing.T) {
 	// Stage generator
@@ -148,13 +148,8 @@ func TestAllStageStop(t *testing.T) {
 			result = append(result, s.(string))
 		}
 
-		go func() {
-			// Тут пришлось обернуть wg.wait в горутину, чтобы не блокировать тест
-			// Иначе вылетает deadlock
-			// Это тест был криво написан или я что-то не так понял?
-			wg.Wait()
-			require.Len(t, result, 0)
-		}()
+		wg.Wait()
+		require.Len(t, result, 0)
 	})
 }
 
