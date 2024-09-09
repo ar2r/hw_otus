@@ -46,13 +46,12 @@ func runStage(in In, done In, stage Stage) Out {
 
 	// Обработка данных из канала stageIn
 	go func() {
-		stageOut := make(Out)
 		defer func() {
 			close(out)
 			// fmt.Println("⛔️ close out channel")
 		}()
 
-		stageOut = stage(stageIn)
+		stageOut := stage(stageIn)
 		for {
 			// Расскомментировать для демонстрации проблемы
 			// time.Sleep(time.Millisecond * 100)
