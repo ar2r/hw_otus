@@ -2,6 +2,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"os"
 )
 
 var (
@@ -18,5 +20,28 @@ func init() {
 
 func main() {
 	flag.Parse()
-	// Place your code here.
+
+	validateStringNotEmpty("file to read from", from)
+	validateStringNotEmpty("file to write to", to)
+	validatePositiveInt("limit", limit)
+	validatePositiveInt("offset", offset)
+
+	if err := Copy(from, to, offset, limit); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
+func validateStringNotEmpty(name, value string) {
+	if value == "" {
+		fmt.Printf("%s is required\n", name)
+		os.Exit(1)
+	}
+}
+
+func validatePositiveInt(name string, value int64) {
+	if value < 0 {
+		fmt.Printf("%s must be positive\n", name)
+		os.Exit(1)
+	}
 }

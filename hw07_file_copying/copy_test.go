@@ -1,7 +1,109 @@
 package main
 
-import "testing"
+import (
+	"math"
+	"math/rand"
+	"os"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 func TestCopy(t *testing.T) {
-	// Place your code here.
+	tests := []struct {
+		title            string
+		offset           int64
+		limit            int64
+		inputFilePath    string
+		expectedFilePath string
+		expectedError    error
+	}{
+		{
+			title:            "Весь файл без ограничений",
+			offset:           0,
+			limit:            0,
+			inputFilePath:    "testdata/input.txt",
+			expectedFilePath: "testdata/input.txt",
+		},
+		{
+			title:            "Offset 100",
+			offset:           100,
+			limit:            0,
+			inputFilePath:    "testdata/input.txt",
+			expectedFilePath: "testdata/out_offset100_limit0.txt",
+		},
+		{
+			title:            "Limit 1000",
+			offset:           0,
+			limit:            1000,
+			inputFilePath:    "testdata/input.txt",
+			expectedFilePath: "testdata/out_offset0_limit1000.txt",
+		},
+		{
+			title:            "Offset 100 Limit 1000",
+			offset:           100,
+			limit:            1000,
+			inputFilePath:    "testdata/input.txt",
+			expectedFilePath: "testdata/out_offset100_limit1000.txt",
+		},
+		{
+			title:         "Offset превышает размер файла",
+			offset:        math.MaxInt64,
+			limit:         0,
+			inputFilePath: "testdata/input.txt",
+			expectedError: ErrOffsetExceedsFileSize,
+		},
+		{
+			title:            "Limit превышает размер файла",
+			offset:           0,
+			limit:            math.MaxInt64,
+			inputFilePath:    "testdata/input.txt",
+			expectedFilePath: "testdata/input.txt",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.title, func(t *testing.T) {
+			outputFilePath := getRandomFileName()
+			defer func() {
+				if _, err := os.Stat(outputFilePath); os.IsNotExist(err) {
+					// Файл не существует и удалять его не нужно
+					return
+				}
+
+				if err := os.Remove(outputFilePath); err != nil {
+					t.Errorf("Файл с результатом копирования найден, но удалить не удалось: %v", err)
+				}
+			}()
+
+			copyErr := Copy(tc.inputFilePath, outputFilePath, tc.offset, tc.limit)
+
+			if tc.expectedError != nil {
+				assert.Equal(t, tc.expectedError, copyErr)
+			} else if tc.expectedFilePath == "" {
+				if copyErr != nil {
+					t.Errorf("Функция Copy вернула непредвиденную ошибку: %v", copyErr)
+				}
+				require.FileExists(t, outputFilePath)
+				resultData, _ := os.ReadFile(outputFilePath)
+				expectedData, _ := os.ReadFile(tc.expectedFilePath)
+				assert.Equal(t, expectedData, resultData)
+			}
+		})
+	}
+}
+
+func getRandomFileName() string {
+	return "result_" + RandString(10)
+}
+
+func RandString(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
 }
