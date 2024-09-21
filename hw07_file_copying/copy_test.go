@@ -111,7 +111,7 @@ func TestCopy(t *testing.T) {
 }
 
 func getRandomFileName() string {
-	return os.TempDir() + "/result_" + RandString(10)
+	return os.TempDir() + "/copy_result_" + RandString(10)
 }
 
 func RandString(n int) string {

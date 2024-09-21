@@ -8,9 +8,12 @@ import (
 )
 
 var (
+	// Если размер файла меньше этого значения, то не будем показывать прогресс бар.
 	maxFileSizeWithoutProgressBar int64 = 1024
-	ErrUnsupportedFile                  = errors.New("unsupported file")
-	ErrOffsetExceedsFileSize            = errors.New("offset exceeds file size")
+	// Будем читать по 42 байта, чтобы чаще обновлять прогресс :-).
+	copyBufferSize           = 42
+	ErrUnsupportedFile       = errors.New("unsupported file")
+	ErrOffsetExceedsFileSize = errors.New("offset exceeds file size")
 )
 
 func Copy(fromPath, toPath string, offset, limit int64) error {
@@ -77,15 +80,15 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 	}
 
 	// Иначе: Копирование с визуализацией процесса копирования
-	if err := copyWithProgres(fromFile, toFile, limit); err != nil {
+	if err := copyWithProgress(fromFile, toFile, limit); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func copyWithProgres(fromFile *os.File, toFile *os.File, limit int64) error {
-	buf := make([]byte, 1024)
+func copyWithProgress(fromFile *os.File, toFile *os.File, limit int64) error {
+	buf := make([]byte, copyBufferSize)
 	var copied int64
 
 	for copied < limit {
@@ -95,7 +98,7 @@ func copyWithProgres(fromFile *os.File, toFile *os.File, limit int64) error {
 		}
 
 		n, err := fromFile.Read(buf[:bytesToRead])
-		if err != nil && err != io.EOF {
+		if err != nil && !errors.Is(err, io.EOF) {
 			return err
 		}
 
@@ -117,7 +120,8 @@ func printProgress(copied, total int64) {
 	percent := float64(copied) / float64(total) * 100
 	fmt.Printf("\rProgress: %.2f%% (%d/%d bytes)", percent, copied, total)
 	if copied == total {
-		fmt.Println("\nCopy complete")
+		// Пустая строка, т.к. прогресс бар закончился.
+		fmt.Print("\n")
 	}
 	// time.Sleep(100 * time.Millisecond) // для плавного обновления прогресса
 }
