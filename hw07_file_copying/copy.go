@@ -69,7 +69,8 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 
 func copyWithProgress(fromFile *os.File, toFile *os.File, limit int64) error {
 	var copied int64
-	lastUpdate := time.Now()
+	// Для срабатывания первого обновления прогресса добавляем секунду к текущему времени
+	lastUpdate := time.Now().Add(time.Second)
 
 	for copied < limit {
 		nSize := copyBufferSize
