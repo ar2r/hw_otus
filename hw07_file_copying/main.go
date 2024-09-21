@@ -19,17 +19,19 @@ func init() {
 }
 
 func main() {
-	flag.Parse()
+	parseFlags()
+	if err := Copy(from, to, offset, limit); err != nil {
+		fmt.Println("Error: ", err)
+		os.Exit(1)
+	}
+}
 
+func parseFlags() {
+	flag.Parse()
 	validateStringNotEmpty("file to read from", from)
 	validateStringNotEmpty("file to write to", to)
 	validatePositiveInt("limit", limit)
 	validatePositiveInt("offset", offset)
-
-	if err := Copy(from, to, offset, limit); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
 }
 
 func validateStringNotEmpty(name, value string) {

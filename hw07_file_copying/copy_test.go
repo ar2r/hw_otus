@@ -50,13 +50,6 @@ func TestCopy(t *testing.T) {
 			expectedFilePath: "testdata/out_offset100_limit1000.txt",
 		},
 		{
-			title:         "Offset превышает размер файла",
-			offset:        math.MaxInt64,
-			limit:         0,
-			inputFilePath: "testdata/input.txt",
-			expectedError: ErrOffsetExceedsFileSize,
-		},
-		{
 			title:            "Limit превышает размер файла",
 			offset:           0,
 			limit:            math.MaxInt64,
@@ -64,10 +57,24 @@ func TestCopy(t *testing.T) {
 			expectedFilePath: "testdata/input.txt",
 		},
 		{
-			title:         "Чтение файла неизвестной длины",
+			title:         "Ошибка Offset превышает размер файла",
+			offset:        math.MaxInt64,
+			limit:         0,
+			inputFilePath: "testdata/input.txt",
+			expectedError: ErrOffsetExceedsFileSize,
+		},
+		{
+			title:         "Ошибка чтения файла неизвестной длины",
 			offset:        0,
 			limit:         0,
 			inputFilePath: "/dev/urandom",
+			expectedError: ErrUnsupportedFile,
+		},
+		{
+			title:         "Ошибка чтения директории",
+			offset:        0,
+			limit:         0,
+			inputFilePath: "/tmp",
 			expectedError: ErrUnsupportedFile,
 		},
 	}
