@@ -13,11 +13,17 @@ import (
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 func TestCopy(t *testing.T) {
+	// Временный файл для одновременного чтения и записи
+	randomInputOutputName := getRandomFileName()
+	file, _ := os.Create(randomInputOutputName)
+	file.Close()
+
 	tests := []struct {
 		title            string
 		offset           int64
 		limit            int64
 		inputFilePath    string
+		outputFilePath   string
 		expectedFilePath string
 		expectedError    error
 	}{
@@ -57,18 +63,19 @@ func TestCopy(t *testing.T) {
 			expectedFilePath: "testdata/input.txt",
 		},
 		{
+			title:          "На чтение и запись указан один файл",
+			offset:         0,
+			limit:          0,
+			inputFilePath:  randomInputOutputName,
+			outputFilePath: randomInputOutputName,
+			expectedError:  ErrUnsupportedFile,
+		},
+		{
 			title:         "Ошибка Offset превышает размер файла",
 			offset:        math.MaxInt64,
 			limit:         0,
 			inputFilePath: "testdata/input.txt",
 			expectedError: ErrOffsetExceedsFileSize,
-		},
-		{
-			title:         "Ошибка чтения файла неизвестной длины",
-			offset:        0,
-			limit:         0,
-			inputFilePath: "/dev/urandom",
-			expectedError: ErrUnsupportedFile,
 		},
 		{
 			title:         "Ошибка чтения директории",
@@ -81,7 +88,13 @@ func TestCopy(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.title, func(t *testing.T) {
-			outputFilePath := getRandomFileName()
+			outputFilePath := ""
+			if tc.outputFilePath != "" {
+				outputFilePath = tc.outputFilePath
+			} else {
+				outputFilePath = getRandomFileName()
+			}
+
 			defer func() {
 				if _, err := os.Stat(outputFilePath); os.IsNotExist(err) {
 					// Файл не существует и удалять его не нужно

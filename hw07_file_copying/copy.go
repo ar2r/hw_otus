@@ -5,18 +5,20 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 )
 
 var (
-	// Если размер файла меньше этого значения, то не будем показывать прогресс бар.
-	maxFileSizeWithoutProgressBar int64 = 1024
-	// Будем читать по 42 байта, чтобы чаще обновлять прогресс :-).
-	copyBufferSize           = 42
-	ErrUnsupportedFile       = errors.New("unsupported file")
-	ErrOffsetExceedsFileSize = errors.New("offset exceeds file size")
+	copyBufferSize           int64 = 32 * 1024
+	ErrUnsupportedFile             = errors.New("unsupported file")
+	ErrOffsetExceedsFileSize       = errors.New("offset exceeds file size")
 )
 
 func Copy(fromPath, toPath string, offset, limit int64) error {
+	if isTheSameFile(fromPath, toPath) {
+		return ErrUnsupportedFile
+	}
+
 	// Открываем исходный файл
 	fromFile, err := os.Open(fromPath)
 	if err != nil {
@@ -35,10 +37,6 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 		return ErrUnsupportedFile
 	}
 
-	if fileInfo.Size() == 0 {
-		return ErrUnsupportedFile
-	}
-
 	// Проверяем, что offset не превышает размер файла
 	if offset > fileInfo.Size() {
 		return ErrOffsetExceedsFileSize
@@ -49,15 +47,7 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		err := toFile.Close()
-		if err != nil {
-			// IDE говорит, что нужно эту ошибку обработать.
-			// Но в данном случае, если ошибка возникнет, то это будет критическая ошибка.
-			// Тут нужно выкинуть панику или этого достаточно??
-			fmt.Println("Error closing file:", err)
-		}
-	}()
+	defer toFile.Close()
 
 	// Устанавливаем смещение в исходном файле
 	if _, err = fromFile.Seek(offset, io.SeekStart); err != nil {
@@ -69,17 +59,7 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 		limit = fileInfo.Size() - offset
 	}
 
-	// Копируем данные без прогресс бара:
-	// - если размер копируемых данных меньше maxFileSizeWithoutProgressBar
-	if limit < maxFileSizeWithoutProgressBar {
-		_, err = io.CopyN(toFile, fromFile, limit)
-		if err != nil && errors.Is(err, io.EOF) {
-			return err
-		}
-		return nil
-	}
-
-	// Иначе: Копирование с визуализацией процесса копирования
+	// Копирование с визуализацией процесса копирования
 	if err := copyWithProgress(fromFile, toFile, limit); err != nil {
 		return err
 	}
@@ -88,31 +68,26 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 }
 
 func copyWithProgress(fromFile *os.File, toFile *os.File, limit int64) error {
-	buf := make([]byte, copyBufferSize)
 	var copied int64
+	lastUpdate := time.Now()
 
 	for copied < limit {
-		bytesToRead := int64(len(buf))
-		if limit-copied < bytesToRead {
-			bytesToRead = limit - copied
-		}
-
-		n, err := fromFile.Read(buf[:bytesToRead])
+		n, err := io.CopyN(toFile, fromFile, copyBufferSize)
 		if err != nil && !errors.Is(err, io.EOF) {
 			return err
 		}
 
-		if n == 0 {
+		copied += n
+		if time.Since(lastUpdate) >= time.Second {
+			printProgress(copied, limit)
+			lastUpdate = time.Now()
+		}
+
+		if errors.Is(err, io.EOF) {
 			break
 		}
-
-		if _, err := toFile.Write(buf[:n]); err != nil {
-			return err
-		}
-
-		copied += int64(n)
-		printProgress(copied, limit)
 	}
+	printProgress(copied, limit) // Final update
 	return nil
 }
 
@@ -123,5 +98,18 @@ func printProgress(copied, total int64) {
 		// Пустая строка, т.к. прогресс бар закончился.
 		fmt.Print("\n")
 	}
-	// time.Sleep(100 * time.Millisecond) // для плавного обновления прогресса
+}
+
+func isTheSameFile(firstFilePath, secondFilePath string) bool {
+	fromFileInfo, err := os.Stat(firstFilePath)
+	if err != nil {
+		return false
+	}
+
+	toFileInfo, err := os.Stat(secondFilePath)
+	if err != nil {
+		return false
+	}
+
+	return os.SameFile(fromFileInfo, toFileInfo)
 }
