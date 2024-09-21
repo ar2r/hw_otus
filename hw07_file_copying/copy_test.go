@@ -63,6 +63,13 @@ func TestCopy(t *testing.T) {
 			inputFilePath:    "testdata/input.txt",
 			expectedFilePath: "testdata/input.txt",
 		},
+		{
+			title:         "Чтение файла неизвестной длины",
+			offset:        0,
+			limit:         0,
+			inputFilePath: "/dev/urandom",
+			expectedError: ErrUnsupportedFile,
+		},
 	}
 
 	for _, tc := range tests {
