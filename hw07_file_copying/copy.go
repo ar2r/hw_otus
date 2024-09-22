@@ -19,34 +19,23 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 	if isTheSameFile(fromPath, toPath) {
 		// Создать новый файл в tmp и писать в него
 		// В конце программы заменить файл toPath на tmp файл
-		originalToPath := toPath
-		toPath = os.TempDir() + "/tmp_" + fmt.Sprintf("%d", time.Now().UnixNano())
+		tempPath := os.TempDir() + "/tmp_" + fmt.Sprintf("%d", time.Now().UnixNano())
 
-		defer func(toPath string) {
+		defer func() {
 			// Удаляем временный файл
-			if err := os.Remove(toPath); err != nil {
+			if err := os.Remove(tempPath); err != nil {
 				fmt.Printf("Error remove tmp file: %v", err)
 			}
-		}(toPath)
+		}()
 
-		defer func(tempToPath string, originalToPath string) {
-			// Перенести содержимое временного файла в исходный
-			reader, err := os.Open(tempToPath)
-			if err != nil {
-				fmt.Printf("Error open tmp file: %v", err)
-				return
-			}
-			defer reader.Close()
+		if err := Copy(fromPath, tempPath, offset, limit); err != nil {
+			return err
+		}
 
-			writer, err := os.Create(originalToPath)
-			if err != nil {
-				fmt.Printf("Error create output file: %v", err)
-				return
-			}
-			defer writer.Close()
-
-			io.Copy(writer, reader)
-		}(toPath, originalToPath)
+		if err := Copy(tempPath, toPath, 0, 0); err != nil {
+			return err
+		}
+		return nil
 	}
 
 	// Открываем исходный файл
@@ -96,6 +85,8 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 	}
 
 	// Копирование с визуализацией процесса копирования
+	fmt.Printf("Copy %s to %s\n", fromPath, toPath)
+	fmt.Printf("Offset %d Limit %d\n", offset, limit)
 	if err := copyWithProgress(fromFile, toFile, limit); err != nil {
 		os.Remove(toPath)
 		return err
