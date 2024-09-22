@@ -16,8 +16,7 @@ func TestCopy(t *testing.T) {
 	// Временный файл для одновременного чтения и записи
 	randomInputOutputName := getRandomFileName()
 	inputData, _ := os.ReadFile("testdata/input.txt")
-	err := os.WriteFile(randomInputOutputName, inputData, 0o644)
-	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(randomInputOutputName, inputData, 0o644))
 
 	tests := []struct {
 		title            string
@@ -96,10 +95,8 @@ func TestCopy(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.title, func(t *testing.T) {
-			outputFilePath := ""
-			if tc.outputFilePath != "" {
-				outputFilePath = tc.outputFilePath
-			} else {
+			outputFilePath := tc.outputFilePath
+			if outputFilePath == "" {
 				outputFilePath = getRandomFileName()
 			}
 

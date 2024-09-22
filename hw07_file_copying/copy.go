@@ -110,10 +110,7 @@ func copyWithProgress(fromFile *os.File, toFile *os.File, limit int64) error {
 	lastUpdate := time.Now().Add(time.Second)
 
 	for copied < limit {
-		nSize := copyBufferSize
-		if limit-copied < copyBufferSize {
-			nSize = limit - copied
-		}
+		nSize := min(copyBufferSize, limit-copied)
 
 		n, err := io.CopyN(toFile, fromFile, nSize)
 		if err != nil && !errors.Is(err, io.EOF) {
