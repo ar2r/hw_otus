@@ -21,9 +21,29 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 		// В конце программы заменить файл toPath на tmp файл
 		originalToPath := toPath
 		toPath = os.TempDir() + "/tmp_" + fmt.Sprintf("%d", time.Now().UnixNano())
+
+		defer func(toPath string) {
+			// Удаляем временный файл
+			os.Remove(toPath)
+		}(toPath)
+
 		defer func(tempToPath string, originalToPath string) {
-			os.Remove(originalToPath)
-			os.Rename(tempToPath, originalToPath)
+			// Перенести содержимое временного файла в исходный
+			reader, err := os.Open(tempToPath)
+			if err != nil {
+				fmt.Printf("Error open tmp file: %v", err)
+				return
+			}
+			defer reader.Close()
+
+			writer, err := os.Create(originalToPath)
+			if err != nil {
+				fmt.Printf("Error create output file: %v", err)
+				return
+			}
+			defer writer.Close()
+
+			io.Copy(writer, reader)
 		}(toPath, originalToPath)
 	}
 
@@ -45,7 +65,7 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 		return ErrFromIsDirectory
 	}
 
-	if fromFileInfo.Size() == 0 && !fromFileInfo.Mode().IsRegular() {
+	if !fromFileInfo.Mode().IsRegular() {
 		// Проверка для файлов, которые не поддерживают смещение (например /dev/urandom)
 		// Этот способ самый компактный
 		return ErrUnsupportedFile
@@ -75,6 +95,7 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 
 	// Копирование с визуализацией процесса копирования
 	if err := copyWithProgress(fromFile, toFile, limit); err != nil {
+		os.Remove(toPath)
 		return err
 	}
 
