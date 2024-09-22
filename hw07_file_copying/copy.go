@@ -9,14 +9,16 @@ import (
 )
 
 var (
-	copyBufferSize           int64 = 32 * 1024
-	ErrUnsupportedFile             = errors.New("unsupported file")
-	ErrOffsetExceedsFileSize       = errors.New("offset exceeds file size")
+	copyBufferSize                  int64 = 32 * 1024
+	ErrUnsupportedFile                    = errors.New("unsupported file")
+	ErrOffsetExceedsFileSize              = errors.New("offset exceeds file size")
+	ErrFromAndToPointsToTheSameFile       = errors.New("from and to points to the same file")
+	ErrFromIsDirectory                    = errors.New("directory copying is not supported")
 )
 
 func Copy(fromPath, toPath string, offset, limit int64) error {
 	if isTheSameFile(fromPath, toPath) {
-		return ErrUnsupportedFile
+		return ErrFromAndToPointsToTheSameFile
 	}
 
 	// Открываем исходный файл
@@ -34,7 +36,7 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 
 	// Проверяем, что это не директория
 	if fromFileInfo.IsDir() {
-		return ErrUnsupportedFile
+		return ErrFromIsDirectory
 	}
 
 	if fromFileInfo.Size() == 0 && !fromFileInfo.Mode().IsRegular() {

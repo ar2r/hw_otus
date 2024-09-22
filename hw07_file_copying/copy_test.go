@@ -75,7 +75,7 @@ func TestCopy(t *testing.T) {
 			limit:          0,
 			inputFilePath:  randomInputOutputName,
 			outputFilePath: randomInputOutputName,
-			expectedError:  ErrUnsupportedFile,
+			expectedError:  ErrFromAndToPointsToTheSameFile,
 		},
 		{
 			title:         "Ошибка Offset превышает размер файла",
@@ -89,7 +89,7 @@ func TestCopy(t *testing.T) {
 			offset:        0,
 			limit:         0,
 			inputFilePath: "/tmp",
-			expectedError: ErrUnsupportedFile,
+			expectedError: ErrFromIsDirectory,
 		},
 	}
 
