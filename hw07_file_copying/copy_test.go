@@ -116,9 +116,10 @@ func TestCopy(t *testing.T) {
 
 			copyErr := Copy(tc.inputFilePath, outputFilePath, tc.offset, tc.limit)
 
-			if tc.expectedError != nil {
+			switch {
+			case tc.expectedError != nil:
 				assert.Equal(t, tc.expectedError, copyErr)
-			} else if tc.expectedFilePath == "" {
+			case tc.expectedFilePath != "":
 				if copyErr != nil {
 					t.Errorf("Функция Copy вернула непредвиденную ошибку: %v", copyErr)
 				}
@@ -126,6 +127,8 @@ func TestCopy(t *testing.T) {
 				resultData, _ := os.ReadFile(outputFilePath)
 				expectedData, _ := os.ReadFile(tc.expectedFilePath)
 				assert.Equal(t, expectedData, resultData)
+			default:
+				t.Errorf("Нет проверок на ошибку или результат")
 			}
 		})
 	}

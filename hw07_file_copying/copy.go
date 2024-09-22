@@ -24,7 +24,9 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 
 		defer func(toPath string) {
 			// Удаляем временный файл
-			os.Remove(toPath)
+			if err := os.Remove(toPath); err != nil {
+				fmt.Printf("Error remove tmp file: %v", err)
+			}
 		}(toPath)
 
 		defer func(tempToPath string, originalToPath string) {
