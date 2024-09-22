@@ -22,7 +22,7 @@ func main() {
 	flag.Parse()
 
 	if err := validateArgs(); err != nil {
-		fmt.Println("Error:", err)
+		fmt.Println("Validation error:", err)
 		os.Exit(1)
 	}
 
@@ -33,30 +33,39 @@ func main() {
 }
 
 func validateArgs() error {
-	if err := validateStringNotEmpty("file to read from", from); err != nil {
-		return err
+	validations := []struct {
+		name  string
+		value interface{}
+		fn    func(string, interface{}) error
+	}{
+		{"file to read from", from, validateStringNotEmpty},
+		{"file to write to", to, validateStringNotEmpty},
+		{"limit", limit, validatePositiveInt},
+		{"offset", offset, validatePositiveInt},
 	}
-	if err := validateStringNotEmpty("file to write to", to); err != nil {
-		return err
+
+	for _, v := range validations {
+		if err := v.fn(v.name, v.value); err != nil {
+			return err
+		}
 	}
-	if err := validatePositiveInt("limit", limit); err != nil {
-		return err
-	}
-	if err := validatePositiveInt("offset", offset); err != nil {
-		return err
-	}
+
 	return nil
 }
 
-func validateStringNotEmpty(name, value string) error {
+func validateStringNotEmpty(name string, value interface{}) error {
 	if value == "" {
 		return fmt.Errorf("%s is required", name)
 	}
 	return nil
 }
 
-func validatePositiveInt(name string, value int64) error {
-	if value < 0 {
+func validatePositiveInt(name string, value interface{}) error {
+	v, ok := value.(int64)
+	if !ok {
+		return fmt.Errorf("%s must be an integer", name)
+	}
+	if v < 0 {
 		return fmt.Errorf("%s must be positive", name)
 	}
 	return nil
