@@ -9,16 +9,22 @@ import (
 )
 
 var (
-	copyBufferSize                  int64 = 32 * 1024
-	ErrUnsupportedFile                    = errors.New("unsupported file")
-	ErrOffsetExceedsFileSize              = errors.New("offset exceeds file size")
-	ErrFromAndToPointsToTheSameFile       = errors.New("from and to points to the same file")
-	ErrFromIsDirectory                    = errors.New("directory copying is not supported")
+	copyBufferSize           int64 = 32 * 1024
+	ErrUnsupportedFile             = errors.New("unsupported file")
+	ErrOffsetExceedsFileSize       = errors.New("offset exceeds file size")
+	ErrFromIsDirectory             = errors.New("directory copying is not supported")
 )
 
 func Copy(fromPath, toPath string, offset, limit int64) error {
 	if isTheSameFile(fromPath, toPath) {
-		return ErrFromAndToPointsToTheSameFile
+		// Создать новый файл в tmp и писать в него
+		// В конце программы заменить файл toPath на tmp файл
+		originalToPath := toPath
+		toPath = os.TempDir() + "/tmp_" + fmt.Sprintf("%d", time.Now().UnixNano())
+		defer func(tempToPath string, originalToPath string) {
+			os.Remove(originalToPath)
+			os.Rename(tempToPath, originalToPath)
+		}(toPath, originalToPath)
 	}
 
 	// Открываем исходный файл

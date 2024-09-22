@@ -15,8 +15,9 @@ const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 func TestCopy(t *testing.T) {
 	// Временный файл для одновременного чтения и записи
 	randomInputOutputName := getRandomFileName()
-	file, _ := os.Create(randomInputOutputName)
-	file.Close()
+	inputData, _ := os.ReadFile("testdata/input.txt")
+	err := os.WriteFile(randomInputOutputName, inputData, 0o644)
+	require.NoError(t, err)
 
 	tests := []struct {
 		title            string
@@ -70,12 +71,12 @@ func TestCopy(t *testing.T) {
 			expectedError: ErrUnsupportedFile,
 		},
 		{
-			title:          "Ошибка на чтение и запись указан один файл",
-			offset:         0,
-			limit:          0,
-			inputFilePath:  randomInputOutputName,
-			outputFilePath: randomInputOutputName,
-			expectedError:  ErrFromAndToPointsToTheSameFile,
+			title:            "Читаем и пишем из одного файла",
+			offset:           100,
+			limit:            1000,
+			inputFilePath:    randomInputOutputName,
+			outputFilePath:   randomInputOutputName,
+			expectedFilePath: "testdata/out_offset100_limit1000.txt",
 		},
 		{
 			title:         "Ошибка Offset превышает размер файла",
