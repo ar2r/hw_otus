@@ -19,31 +19,45 @@ func init() {
 }
 
 func main() {
-	parseFlags()
-	if err := Copy(from, to, offset, limit); err != nil {
-		fmt.Println("Error: ", err)
-		os.Exit(1)
-	}
-}
-
-func parseFlags() {
 	flag.Parse()
-	validateStringNotEmpty("file to read from", from)
-	validateStringNotEmpty("file to write to", to)
-	validatePositiveInt("limit", limit)
-	validatePositiveInt("offset", offset)
+
+	if err := validateArgs(); err != nil {
+		fmt.Println("Error:", err)
+		os.Exit(1)
+	}
+
+	if err := Copy(from, to, offset, limit); err != nil {
+		fmt.Println("Error:", err)
+		os.Exit(1)
+	}
 }
 
-func validateStringNotEmpty(name, value string) {
+func validateArgs() error {
+	if err := validateStringNotEmpty("file to read from", from); err != nil {
+		return err
+	}
+	if err := validateStringNotEmpty("file to write to", to); err != nil {
+		return err
+	}
+	if err := validatePositiveInt("limit", limit); err != nil {
+		return err
+	}
+	if err := validatePositiveInt("offset", offset); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateStringNotEmpty(name, value string) error {
 	if value == "" {
-		fmt.Printf("%s is required\n", name)
-		os.Exit(1)
+		return fmt.Errorf("%s is required", name)
 	}
+	return nil
 }
 
-func validatePositiveInt(name string, value int64) {
+func validatePositiveInt(name string, value int64) error {
 	if value < 0 {
-		fmt.Printf("%s must be positive\n", name)
-		os.Exit(1)
+		return fmt.Errorf("%s must be positive", name)
 	}
+	return nil
 }

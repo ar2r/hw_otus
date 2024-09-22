@@ -27,18 +27,24 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 	defer fromFile.Close()
 
 	// Получаем информацию о файле
-	fileInfo, err := fromFile.Stat()
+	fromFileInfo, err := fromFile.Stat()
 	if err != nil {
 		return err
 	}
 
 	// Проверяем, что это не директория
-	if fileInfo.IsDir() {
+	if fromFileInfo.IsDir() {
+		return ErrUnsupportedFile
+	}
+
+	if fromFileInfo.Size() == 0 && !fromFileInfo.Mode().IsRegular() {
+		// Проверка для файлов, которые не поддерживают смещение (например /dev/urandom)
+		// Этот способ самый компактный
 		return ErrUnsupportedFile
 	}
 
 	// Проверяем, что offset не превышает размер файла
-	if offset > fileInfo.Size() {
+	if offset > fromFileInfo.Size() {
 		return ErrOffsetExceedsFileSize
 	}
 
@@ -55,8 +61,8 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 	}
 
 	// Копируем данные с учетом лимита
-	if limit == 0 || limit > fileInfo.Size()-offset {
-		limit = fileInfo.Size() - offset
+	if limit == 0 || limit > fromFileInfo.Size()-offset {
+		limit = fromFileInfo.Size() - offset
 	}
 
 	// Копирование с визуализацией процесса копирования

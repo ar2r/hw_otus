@@ -63,7 +63,14 @@ func TestCopy(t *testing.T) {
 			expectedFilePath: "testdata/input.txt",
 		},
 		{
-			title:          "На чтение и запись указан один файл",
+			title:         "Ошибка чтения файла неизвестной длины (не поддерживает смещение)",
+			offset:        0,
+			limit:         0,
+			inputFilePath: "/dev/urandom",
+			expectedError: ErrUnsupportedFile,
+		},
+		{
+			title:          "Ошибка на чтение и запись указан один файл",
 			offset:         0,
 			limit:          0,
 			inputFilePath:  randomInputOutputName,
