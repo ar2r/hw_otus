@@ -1,10 +1,12 @@
 package main
 
 import (
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -16,26 +18,19 @@ var (
 )
 
 func Copy(fromPath, toPath string, offset, limit int64) error {
+	fromPath, _ = filepath.Abs(fromPath)
+	toPath, _ = filepath.Abs(toPath)
+	var originalToPath string
+
+	// fromPath и toPath указывают на один и тот же файл.
 	if isTheSameFile(fromPath, toPath) {
-		// Создать новый файл в tmp и писать в него
-		// В конце программы заменить файл toPath на tmp файл
-		tempPath := os.TempDir() + "/tmp_" + fmt.Sprintf("%d", time.Now().UnixNano())
-
-		defer func() {
-			// Удаляем временный файл
-			if err := os.Remove(tempPath); err != nil {
-				fmt.Printf("Error remove tmp file: %v", err)
-			}
-		}()
-
-		if err := Copy(fromPath, tempPath, offset, limit); err != nil {
-			return err
+		originalToPath = toPath
+		fileHash, err := calculateSHA256(fromPath)
+		if err != nil {
+			return ErrUnsupportedFile
 		}
-
-		if err := Copy(tempPath, toPath, 0, 0); err != nil {
-			return err
-		}
-		return nil
+		// Подмена toPath на временный файл
+		toPath = fmt.Sprintf("%s/%s_%d.tmp", filepath.Dir(toPath), fileHash, time.Now().UnixNano())
 	}
 
 	// Открываем исходный файл
@@ -92,6 +87,22 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 		return err
 	}
 
+	// Обработка копирования через промежуточный файл
+	if originalToPath != "" {
+		// Удаляем целевой файл
+		if err := os.Remove(originalToPath); err != nil {
+			// Удалить временный файл
+			os.Remove(toPath)
+			return err
+		}
+
+		if err := os.Rename(toPath, originalToPath); err != nil {
+			// Удалить временный файл
+			os.Remove(toPath)
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -143,4 +154,27 @@ func isTheSameFile(firstFilePath, secondFilePath string) bool {
 	}
 
 	return os.SameFile(fromFileInfo, toFileInfo)
+}
+
+func calculateSHA256(filename string) (string, error) {
+	// Открываем файл
+	file, err := os.Open(filename)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	// Создаем новый хеш SHA256
+	hash := sha256.New()
+
+	// Копируем содержимое файла в хеш
+	if _, err := io.Copy(hash, file); err != nil {
+		return "", err
+	}
+
+	// Получаем SHA256 хеш в виде среза байт
+	hashInBytes := hash.Sum(nil)
+
+	// Преобразуем байты в строку в формате hex
+	return fmt.Sprintf("%x", hashInBytes), nil
 }
