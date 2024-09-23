@@ -1,13 +1,14 @@
 package main
 
 import (
-	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 var (
@@ -25,12 +26,8 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 	// fromPath и toPath указывают на один и тот же файл.
 	if isTheSameFile(fromPath, toPath) {
 		originalToPath = toPath
-		fileHash, err := calculateSHA256(fromPath)
-		if err != nil {
-			return ErrUnsupportedFile
-		}
 		// Подмена toPath на временный файл
-		toPath = fmt.Sprintf("%s/%s_%d.tmp", filepath.Dir(toPath), fileHash, time.Now().UnixNano())
+		toPath = fmt.Sprintf("%s/%d_%s.tmp", filepath.Dir(toPath), time.Now().UnixNano(), uuid.New())
 	}
 
 	// Открываем исходный файл
@@ -154,27 +151,4 @@ func isTheSameFile(firstFilePath, secondFilePath string) bool {
 	}
 
 	return os.SameFile(fromFileInfo, toFileInfo)
-}
-
-func calculateSHA256(filename string) (string, error) {
-	// Открываем файл
-	file, err := os.Open(filename)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-
-	// Создаем новый хеш SHA256
-	hash := sha256.New()
-
-	// Копируем содержимое файла в хеш
-	if _, err := io.Copy(hash, file); err != nil {
-		return "", err
-	}
-
-	// Получаем SHA256 хеш в виде среза байт
-	hashInBytes := hash.Sum(nil)
-
-	// Преобразуем байты в строку в формате hex
-	return fmt.Sprintf("%x", hashInBytes), nil
 }

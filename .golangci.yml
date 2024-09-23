@@ -11,9 +11,18 @@ linters-settings:
   depguard:
     rules:
       main:
+        files:
+          - $all
+          - "!$test"
         allow:
           - $gostd
-          - github.com/stretchr/testify
+          - github.com/google # all google packages
+      test:
+        files:
+          - "$test"
+        allow:
+          - $gostd
+          - github.com/stretchr
 
 issues:
   exclude-rules:
