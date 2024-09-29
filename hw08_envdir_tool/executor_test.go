@@ -46,13 +46,16 @@ func TestRunCmd(t *testing.T) {
 			defer func() { os.Stdout = oldStdout }()
 			os.Stdout = w
 
+			// Вызов функции
 			got := RunCmd(tt.cmd, tt.env)
+
 			w.Close()
 			io.Copy(&stdout, r)
 
 			if got != tt.expected {
 				t.Errorf("RunCmd() = %v, want %v", got, tt.expected)
 			}
+
 			if stdout.String() != tt.stdout {
 				t.Errorf("stdout = %v, want %v", stdout.String(), tt.stdout)
 			}
