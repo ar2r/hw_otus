@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -23,7 +24,7 @@ type envFile struct {
 // ReadDir reads a specified directory and returns map of env variables.
 // Variables represented as files where filename is name of variable, file first line is a value.
 func ReadDir(dir string) (Environment, error) {
-	env := make(Environment)
+	env := Environment{}
 
 	if err := isDirectoryCompatible(dir); err != nil {
 		return nil, err
@@ -41,13 +42,12 @@ func ReadDir(dir string) (Environment, error) {
 			return nil, fmt.Errorf("error reading file: %s, error: %w", file.path, err)
 		}
 
-		fileContent = cleanupContent(fileContent)
-
 		if len(fileContent) == 0 {
 			env[file.name] = EnvValue{Value: "", NeedRemove: true}
 			continue
 		}
 
+		fileContent = cleanupContent(fileContent)
 		env[file.name] = EnvValue{Value: string(fileContent), NeedRemove: false}
 	}
 
@@ -87,7 +87,7 @@ func getFilePathSlice(dir string) ([]envFile, error) {
 
 		envFile := envFile{
 			name: file.Name(),
-			path: fmt.Sprintf("%s%s%s", dir, string(os.PathSeparator), file.Name()),
+			path: filepath.Join(dir, file.Name()),
 		}
 		compatibleFiles = append(compatibleFiles, envFile)
 	}
