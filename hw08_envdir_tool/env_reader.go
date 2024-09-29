@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
+
+var reEnvName = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
 type Environment map[string]EnvValue
 
@@ -83,6 +86,10 @@ func getFilePathSlice(dir string) ([]envFile, error) {
 		// Проверить доступность файла на чтение
 		if _, err := os.Open(fmt.Sprintf("%s%s%s", dir, string(os.PathSeparator), file.Name())); err != nil {
 			return nil, fmt.Errorf("error reading env file: %s", file.Name())
+		}
+
+		if !reEnvName.MatchString(file.Name()) {
+			return nil, fmt.Errorf("invalid env file name: %s", file.Name())
 		}
 
 		envFile := envFile{
