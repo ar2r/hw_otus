@@ -2,7 +2,7 @@ package main
 
 import (
 	"errors"
-	"fmt"
+	"log"
 	"os"
 )
 
@@ -13,7 +13,7 @@ var (
 
 func main() {
 	if len(os.Args) < 2 {
-		printExit(ErrNotEnoughArguments, nil)
+		log.Fatal(ErrNotEnoughArguments)
 	}
 	exitCode := RunCmd(os.Args[2:], getEnvironment(os.Args[1]))
 	os.Exit(exitCode)
@@ -22,12 +22,7 @@ func main() {
 func getEnvironment(envDirPath string) Environment {
 	myEnv, err := ReadDir(envDirPath)
 	if err != nil {
-		printExit(ErrReadingEnvDir, err)
+		log.Fatal(ErrReadingEnvDir, err)
 	}
 	return myEnv
-}
-
-func printExit(msg error, err error) {
-	fmt.Println(msg, err)
-	os.Exit(1)
 }

@@ -33,6 +33,10 @@ func RunCmd(cmd []string, env Environment) (returnCode int) {
 			// Вернуть exit code выполненной команды
 			return exitError.ExitCode()
 		}
+		// os.PathError
+		// os.LinkError
+		// os.SyscallError
+		return 1
 	}
 
 	return 0

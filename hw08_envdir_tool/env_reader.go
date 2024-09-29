@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -40,7 +43,7 @@ func ReadDir(dir string) (Environment, error) {
 	}
 
 	for _, file := range files {
-		fileContent, err := os.ReadFile(file.path)
+		fileContent, err := readFirstLine(file.path)
 		if err != nil {
 			return nil, fmt.Errorf("error reading file: %s, error: %w", file.path, err)
 		}
@@ -58,7 +61,6 @@ func ReadDir(dir string) (Environment, error) {
 }
 
 func cleanupContent(fileContent []byte) []byte {
-	fileContent = truncateRightNewLine(fileContent)
 	fileContent = bytes.ReplaceAll(fileContent, []byte{0}, []byte{'\n'})
 	fileContent = []byte(strings.TrimRight(string(fileContent), " \t\n\r"))
 	return fileContent
@@ -118,18 +120,21 @@ func isDirectoryCompatible(dir string) error {
 	return nil
 }
 
-func truncateRightNewLine(fileContent []byte) []byte {
-	for i := 0; i < len(fileContent); i++ {
-		if fileContent[i] == '\n' {
-			return fileContent[:i]
-		}
-		if fileContent[i] == '\r' {
-			if i+1 < len(fileContent) && fileContent[i+1] == '\n' {
-				return fileContent[:i]
-			}
-			return fileContent[:i]
-		}
+func readFirstLine(filePath string) ([]byte, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	reader := bufio.NewReader(file)
+	line, _, err := reader.ReadLine()
+	if errors.Is(err, io.EOF) {
+		return []byte{}, nil
+	}
+	if err != nil {
+		return nil, err
 	}
 
-	return fileContent
+	return line, nil
 }
