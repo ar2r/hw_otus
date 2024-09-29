@@ -15,6 +15,11 @@ type EnvValue struct {
 	NeedRemove bool
 }
 
+type envFile struct {
+	name string
+	path string
+}
+
 // ReadDir reads a specified directory and returns map of env variables.
 // Variables represented as files where filename is name of variable, file first line is a value.
 func ReadDir(dir string) (Environment, error) {
@@ -31,28 +36,33 @@ func ReadDir(dir string) (Environment, error) {
 	}
 
 	for _, file := range files {
-		filePath := fmt.Sprintf("%s%s%s", dir, string(os.PathSeparator), file.Name())
-		fileContent, err := os.ReadFile(filePath)
+		fileContent, err := os.ReadFile(file.path)
 		if err != nil {
-			return nil, fmt.Errorf("error reading file: %s, error: %w", filePath, err)
+			return nil, fmt.Errorf("error reading file: %s, error: %w", file.path, err)
 		}
 
+		fileContent = cleanupContent(fileContent)
+
 		if len(fileContent) == 0 {
-			env[file.Name()] = EnvValue{Value: "", NeedRemove: true}
+			env[file.name] = EnvValue{Value: "", NeedRemove: true}
 			continue
 		}
 
-		fileContent = findUniversalNewline(fileContent)
-		fileContent = bytes.ReplaceAll(fileContent, []byte{0}, []byte{'\n'})
-		fileContent = []byte(strings.TrimRight(string(fileContent), " \t\n\r"))
-		env[file.Name()] = EnvValue{Value: string(fileContent), NeedRemove: false}
+		env[file.name] = EnvValue{Value: string(fileContent), NeedRemove: false}
 	}
 
 	return env, nil
 }
 
-func getFilePathSlice(dir string) ([]os.DirEntry, error) {
-	compatibleFiles := make([]os.DirEntry, 0)
+func cleanupContent(fileContent []byte) []byte {
+	fileContent = truncateRightNewLine(fileContent)
+	fileContent = bytes.ReplaceAll(fileContent, []byte{0}, []byte{'\n'})
+	fileContent = []byte(strings.TrimRight(string(fileContent), " \t\n\r"))
+	return fileContent
+}
+
+func getFilePathSlice(dir string) ([]envFile, error) {
+	compatibleFiles := make([]envFile, 0)
 
 	originalFiles, err := os.ReadDir(dir)
 	if err != nil {
@@ -75,7 +85,11 @@ func getFilePathSlice(dir string) ([]os.DirEntry, error) {
 			return nil, fmt.Errorf("error reading env file: %s", file.Name())
 		}
 
-		compatibleFiles = append(compatibleFiles, file)
+		envFile := envFile{
+			name: file.Name(),
+			path: fmt.Sprintf("%s%s%s", dir, string(os.PathSeparator), file.Name()),
+		}
+		compatibleFiles = append(compatibleFiles, envFile)
 	}
 
 	return compatibleFiles, nil
@@ -97,7 +111,7 @@ func isDirectoryCompatible(dir string) error {
 	return nil
 }
 
-func findUniversalNewline(fileContent []byte) []byte {
+func truncateRightNewLine(fileContent []byte) []byte {
 	for i := 0; i < len(fileContent); i++ {
 		if fileContent[i] == '\n' {
 			return fileContent[:i]
