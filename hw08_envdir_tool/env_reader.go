@@ -34,7 +34,7 @@ func ReadDir(dir string) (Environment, error) {
 		filePath := fmt.Sprintf("%s%s%s", dir, string(os.PathSeparator), file.Name())
 		fileContent, err := os.ReadFile(filePath)
 		if err != nil {
-			return nil, fmt.Errorf("Error reading file: %s, error: %s", filePath, err)
+			return nil, fmt.Errorf("error reading file: %s, error: %s", filePath, err)
 		}
 
 		if len(fileContent) == 0 {
@@ -56,7 +56,7 @@ func getFilePathSlice(dir string) ([]os.DirEntry, error) {
 
 	originalFiles, err := os.ReadDir(dir)
 	if err != nil {
-		return nil, fmt.Errorf("Error reading directory: %s", dir)
+		return nil, fmt.Errorf("error reading directory: %s", dir)
 	}
 
 	for _, file := range originalFiles {
@@ -71,27 +71,27 @@ func getFilePathSlice(dir string) ([]os.DirEntry, error) {
 		}
 
 		// Проверить доступность файла на чтение
-		if file.Type().Perm()&0400 == 0 {
-			continue
+		if _, err := os.Open(fmt.Sprintf("%s%s%s", dir, string(os.PathSeparator), file.Name())); err != nil {
+			return nil, fmt.Errorf("error reading env file: %s", file.Name())
 		}
 
 		compatibleFiles = append(compatibleFiles, file)
 	}
 
-	return originalFiles, nil
+	return compatibleFiles, nil
 }
 
 func isDirectoryCompatible(dir string) error {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		return fmt.Errorf("Directory does not exist: %s", dir)
+		return fmt.Errorf("directory does not exist: %s", dir)
 	}
 
 	if fileInfo, err := os.Stat(dir); err != nil || !fileInfo.IsDir() {
-		return fmt.Errorf("Not a directory: %s", dir)
+		return fmt.Errorf("not a directory: %s", dir)
 	}
 
 	if _, err := os.Open(dir); err != nil {
-		return fmt.Errorf("Directory is not readable: %s", dir)
+		return fmt.Errorf("directory is not readable: %s", dir)
 	}
 
 	return nil
