@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -56,6 +57,33 @@ func TestReadDir(t *testing.T) {
 		env, err := ReadDir(notReadableDir)
 		require.Error(t, err)
 		require.Equal(t, "directory is not readable: testdata/not_readable", err.Error())
+		require.Nil(t, env)
+	})
+
+	t.Run("Файл недоступен для чтения", func(t *testing.T) {
+		notReadableDir := "testdata/dir_with_not_readable_file"
+		if err := os.Mkdir(notReadableDir, 0o755); err != nil {
+			t.Fatalf("Error creating directory: %v", err)
+		}
+
+		notReadableFile := filepath.Join(notReadableDir, "NOT_READABLE")
+		if _, err := os.Create(notReadableFile); err != nil {
+			t.Fatalf("Error creating file: %v", err)
+		}
+		os.Chmod(notReadableFile, 0o000)
+
+		defer func() {
+			if err := os.Chmod(notReadableDir, 0o755); err != nil {
+				t.Fatalf("Error changing directory permissions: %v", err)
+			}
+			if err := os.RemoveAll(notReadableDir); err != nil {
+				t.Fatalf("Error removing directory: %v", err)
+			}
+		}()
+
+		env, err := ReadDir(notReadableDir)
+		require.Error(t, err)
+		require.Equal(t, "error reading env file: NOT_READABLE", err.Error())
 		require.Nil(t, env)
 	})
 
