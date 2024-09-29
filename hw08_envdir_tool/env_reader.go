@@ -34,7 +34,7 @@ func ReadDir(dir string) (Environment, error) {
 		filePath := fmt.Sprintf("%s%s%s", dir, string(os.PathSeparator), file.Name())
 		fileContent, err := os.ReadFile(filePath)
 		if err != nil {
-			return nil, fmt.Errorf("error reading file: %s, error: %s", filePath, err)
+			return nil, fmt.Errorf("error reading file: %s, error: %w", filePath, err)
 		}
 
 		if len(fileContent) == 0 {
@@ -43,7 +43,7 @@ func ReadDir(dir string) (Environment, error) {
 		}
 
 		fileContent = findUniversalNewline(fileContent)
-		fileContent = bytes.Replace(fileContent, []byte{0}, []byte{'\n'}, -1)
+		fileContent = bytes.ReplaceAll(fileContent, []byte{0}, []byte{'\n'})
 		fileContent = []byte(strings.TrimRight(string(fileContent), " \t\n\r"))
 		env[file.Name()] = EnvValue{Value: string(fileContent), NeedRemove: false}
 	}
