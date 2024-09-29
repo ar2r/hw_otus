@@ -20,34 +20,13 @@ func main() {
 	if len(os.Args) < 3 {
 		printExit(ErrNotEnoughArguments, nil)
 	}
-
 	envDirPath := getEnvDirPath()
 	executableFilePath := getExecutableFilePath()
-	myEnv := getEnvironment(envDirPath)
-	args := getArgs()
+	myEnvironment := getEnvironment(envDirPath)
+	osArgs := getOsArgs()
 
-	// Запустить команду
-	cmd := exec.Command(executableFilePath, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
+	errCmd := runCommand(executableFilePath, myEnvironment, osArgs)
 
-	// Pass env which was set before via export
-	for _, v := range os.Environ() {
-		cmd.Env = append(cmd.Env, v)
-	}
-
-	// Передать myEnv в исполняемый файл
-	for k, v := range myEnv {
-		if v.NeedRemove {
-			cmd.Env = append(cmd.Env, k+"=")
-			continue
-		}
-		cmd.Env = append(cmd.Env, k+"="+v.Value)
-	}
-
-	// Запустить команду
-	errCmd := cmd.Run()
 	if errCmd != nil {
 		if exitError, ok := errCmd.(*exec.ExitError); ok {
 			// Вернуть exit code выполненной команды
@@ -58,7 +37,32 @@ func main() {
 	}
 }
 
-func getArgs() []string {
+func runCommand(executableFilePath string, myEnvironment Environment, osArgs []string) error {
+	// Запустить команду
+	cmd := exec.Command(executableFilePath, osArgs...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	// Передать текущие переменные окружения
+	for _, v := range os.Environ() {
+		cmd.Env = append(cmd.Env, v)
+	}
+
+	// Передать переменные окружения из файлов
+	for k, v := range myEnvironment {
+		if v.NeedRemove {
+			cmd.Env = append(cmd.Env, k+"=")
+			continue
+		}
+		cmd.Env = append(cmd.Env, k+"="+v.Value)
+	}
+
+	// Запустить команду
+	errCmd := cmd.Run()
+	return errCmd
+}
+
+func getOsArgs() []string {
 	var args []string
 
 	for i := 3; i < len(os.Args); i++ {
