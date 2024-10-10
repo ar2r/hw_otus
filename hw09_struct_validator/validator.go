@@ -11,20 +11,20 @@ import (
 )
 
 var (
-	ErrNotAStruct       = errors.New("not a struct")
-	ErrUnsupportedType  = errors.New("unsupported type")
-	ErrUnsupportedSlice = errors.New("slice of unsupported type")
-	ErrNoRuleSpecified  = errors.New("no rule specified")
+	ErrSysNotAStruct          = SystemError{errors.New("not a struct")}
+	ErrSysUnsupportedType     = SystemError{errors.New("unsupported type")}
+	ErrSysUnsupportedSlice    = SystemError{errors.New("slice of unsupported type")}
+	ErrSysInvalidRule         = SystemError{errors.New("invalid rule")}
+	ErrSysCantConvertLenValue = SystemError{errors.New("can't convert len value")}
+	ErrSysCantConvertMaxValue = SystemError{errors.New("can't convert max value")}
+	ErrSysCantConvertMinValue = SystemError{errors.New("can't convert min value")}
+	ErrSysRegexpCompile       = SystemError{errors.New("regexp compile failed")}
 )
 
 var (
-	ErrInvalidRule             = errors.New("invalid rule")
 	ErrValueIsLessThanMinValue = errors.New("value is less than min value")
 	ErrValueIsMoreThanMaxValue = errors.New("value is more than max value")
-	ErrCantConvertMinValue     = errors.New("can't convert min value")
-	ErrCantConvertMaxValue     = errors.New("can't convert max value")
 	ErrValueNotInList          = errors.New("value is not in the list")
-	ErrCantConvertLenValue     = errors.New("can't convert len value")
 	ErrStringLengthMismatch    = errors.New("string length mismatch")
 	ErrRegexpMatchFailed       = errors.New("regexp match failed")
 )
@@ -36,6 +36,14 @@ var (
 	LenRule    = "len"
 	RegexpRule = "regexp"
 )
+
+type SystemError struct {
+	Err error
+}
+
+func (e SystemError) Error() string {
+	return fmt.Sprintf("system error: %v", e.Err)
+}
 
 type ValidationError struct {
 	Field string
@@ -63,7 +71,7 @@ func Validate(v interface{}) error {
 
 	vType := reflect.TypeOf(v)
 	if vType.Kind() != reflect.Struct {
-		return ErrNotAStruct
+		return fmt.Errorf("%w: %v", ErrSysNotAStruct, vType.Kind())
 	}
 
 	for i := 0; i < vType.NumField(); i++ {
@@ -80,6 +88,9 @@ func Validate(v interface{}) error {
 		case reflect.String:
 			err := stringValidate(propValue.String(), propTagValue)
 			if err != nil {
+				if errors.As(err, &SystemError{}) {
+					return err
+				}
 				errorsSlice = append(errorsSlice, ValidationError{
 					Field: propType.Name,
 					Err:   err,
@@ -88,6 +99,9 @@ func Validate(v interface{}) error {
 		case reflect.Int:
 			err := intValidate(int(propValue.Int()), propTagValue)
 			if err != nil {
+				if errors.As(err, &SystemError{}) {
+					return err
+				}
 				errorsSlice = append(errorsSlice, ValidationError{
 					Field: propType.Name,
 					Err:   err,
@@ -101,6 +115,9 @@ func Validate(v interface{}) error {
 				for _, val := range propValue.Interface().([]string) {
 					err := stringValidate(val, propTagValue)
 					if err != nil {
+						if errors.As(err, &SystemError{}) {
+							return err
+						}
 						errorsSlice = append(errorsSlice, ValidationError{
 							Field: propType.Name,
 							Err:   err,
@@ -111,6 +128,9 @@ func Validate(v interface{}) error {
 				for _, val := range propValue.Interface().([]int) {
 					err := intValidate(val, propTagValue)
 					if err != nil {
+						if errors.As(err, &SystemError{}) {
+							return err
+						}
 						errorsSlice = append(errorsSlice, ValidationError{
 							Field: propType.Name,
 							Err:   err,
@@ -118,16 +138,10 @@ func Validate(v interface{}) error {
 					}
 				}
 			default:
-				errorsSlice = append(errorsSlice, ValidationError{
-					Field: propType.Name,
-					Err:   ErrUnsupportedSlice,
-				})
+				return fmt.Errorf("%w: %v", ErrSysUnsupportedSlice, propValue.Type().Elem().Kind())
 			}
 		default:
-			errorsSlice = append(errorsSlice, ValidationError{
-				Field: propType.Name,
-				Err:   ErrUnsupportedType,
-			})
+			return fmt.Errorf("%w: %v", ErrSysUnsupportedType, propValue.Kind())
 		}
 	}
 
@@ -142,14 +156,14 @@ func intValidate(v int, tag string) error {
 		rule := strings.Split(rawRule, ":")
 
 		if len(rule) != 2 {
-			return fmt.Errorf("%w: %s", ErrInvalidRule, rawRule)
+			return fmt.Errorf("%w: %s", ErrSysInvalidRule, tag)
 		}
 
 		switch rule[0] {
 		case MinRule:
 			minValue, err := strconv.Atoi(rule[1])
 			if err != nil {
-				return fmt.Errorf("%w: %w", ErrCantConvertMinValue, err)
+				return fmt.Errorf("%w: %w", ErrSysCantConvertMinValue, err)
 			}
 			if v < minValue {
 				return fmt.Errorf("%w: %d", ErrValueIsLessThanMinValue, minValue)
@@ -157,7 +171,7 @@ func intValidate(v int, tag string) error {
 		case MaxRule:
 			maxValue, err := strconv.Atoi(rule[1])
 			if err != nil {
-				return fmt.Errorf("%w: %w", ErrCantConvertMaxValue, err)
+				return fmt.Errorf("%w: %w", ErrSysCantConvertMaxValue, err)
 			}
 			if v > maxValue {
 				return fmt.Errorf("%w: %d", ErrValueIsMoreThanMaxValue, maxValue)
@@ -173,8 +187,6 @@ func intValidate(v int, tag string) error {
 			if !isMatched {
 				return fmt.Errorf("%w: %d in %s", ErrValueNotInList, v, rule[1])
 			}
-		default:
-			return ErrNoRuleSpecified
 		}
 	}
 	return nil
@@ -185,14 +197,14 @@ func stringValidate(v string, tag string) error {
 		rule := strings.Split(rawRule, ":")
 
 		if len(rule) != 2 {
-			return fmt.Errorf("%w: %s", ErrInvalidRule, rawRule)
+			return fmt.Errorf("%w: %s", ErrSysInvalidRule, rawRule)
 		}
 
 		switch rule[0] {
 		case LenRule:
 			lenString, err := strconv.Atoi(rule[1])
 			if err != nil {
-				return fmt.Errorf("%w: %w", ErrCantConvertLenValue, err)
+				return fmt.Errorf("%w: %w", ErrSysCantConvertLenValue, err)
 			}
 			if len(v) != lenString {
 				return fmt.Errorf("%w: expected %d, got %d", ErrStringLengthMismatch, lenString, len(v))
@@ -200,7 +212,7 @@ func stringValidate(v string, tag string) error {
 		case RegexpRule:
 			compiledRegexp, err := getCompiledRegexp(rule[1])
 			if err != nil {
-				return fmt.Errorf("%w: %w", ErrRegexpMatchFailed, err)
+				return ErrSysRegexpCompile
 			}
 			if !compiledRegexp.MatchString(v) {
 				return fmt.Errorf("%w: %s", ErrRegexpMatchFailed, rule[1])
@@ -215,8 +227,6 @@ func stringValidate(v string, tag string) error {
 			if !isMatched {
 				return fmt.Errorf("%w: %s in %s", ErrValueNotInList, v, rule[1])
 			}
-		default:
-			return ErrNoRuleSpecified
 		}
 	}
 	return nil
