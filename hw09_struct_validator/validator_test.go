@@ -30,6 +30,10 @@ type (
 		Values []int `validate:"min:0|max:9"`
 	}
 
+	InvalidRule struct {
+		Data int `validate:"min:0:0:0"`
+	}
+
 	Token struct {
 		Header    []byte
 		Payload   []byte
@@ -127,6 +131,13 @@ func TestValidate(t *testing.T) {
 					Err:   fmt.Errorf("%w: 9", ErrValueIsMoreThanMaxValue),
 				},
 			},
+		},
+		{
+			name: "rule invalid",
+			in: InvalidRule{
+				Data: 123,
+			},
+			expectedErr: fmt.Errorf("%w: min:0:0:0", ErrSysInvalidRule),
 		},
 	}
 
