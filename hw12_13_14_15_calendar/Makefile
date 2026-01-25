@@ -52,7 +52,7 @@ version: build
 test:
 	# Если тесты запускаются с TZ=UTC или TZ="", происходит какая-то странная магия. Подробности в пул реквесте.
 	# Поэтому запускаем тесты с TZ=Europe/Moscow 🤬
-	TZ=Europe/Moscow go test -v -race -tags=ci ./internal/...
+	go test -v -race -tags=ci ./internal/...
 
 test-integration:
 	docker compose -f docker-compose.yaml up --build -d
